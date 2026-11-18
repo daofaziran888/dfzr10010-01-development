@@ -50,7 +50,30 @@ npm run dev
 | 模块 | 目录 | 业务对象 | 主要字段 |
 | --- | --- | --- | --- |
 | 湖表格式管理 | `tablefmt` | 表格式配置 | 配置编号、表名称、格式类型 |
-| 小文件合并 | `compact` | 合并任务 | 任务编号、目标表名、文件范围 |
+| 小文件合并 | `compact` | 合并任务 / 结果数据集 | 任务编号、目标表名、目标大小、预计与实际收益 |
+
+### 小文件合并的执行链路
+
+1. **容量预估**：`GET /api/compact/estimate?table=lake.orders` 读取 `compact_shards` 里的现有分片统计，
+   按目标大小顺序装箱，得到预计输出文件数与预计容量下降。示例表 `lake.orders` 有 240 个 6~18MB
+   分片（`dt=2026-11-15/account_id=...` 两级目录），统计报告登记为 7.8GB。
+2. **确认**：`POST /api/compact/confirm` 生成一份结果数据集（`CDS-*`）与一个执行批次（`BATCH-*`）。
+   同一张表已有执行中的批次时返回 409，并发确认只保留一个批次；一次确认只对应一份合并结果。
+3. **执行**：`POST /api/compact/batches/{批次}/run` 按并行度分段处理；统计异常的分片写为异常并留在
+   剩余清单里，`POST /api/compact/batches/{批次}/resume` 从剩余分片继续。实际收益只在批次全部成功后
+   记入该批次一次，重复执行返回 409，复核清单不会重复累计。
+4. **复核**：`GET /api/compact/review` 每张表只保留一份快照——有成功批次展示实际收益，否则展示预计
+   （分段）收益。`GET /api/compact/review/{数据集编号}` 回到复核详情，重复打开不会新增数据集记录。
+5. **核对工作台**：`GET /api/compact/workbench` 按批次归组结果数据集、版本依据与复核清单；同表优化
+   任务与运行中的批次冲突时给出唯一快照口径。
+6. **统计报告**：`GET /api/compact/reports` 与工作台读同一批结果数据集，只按成功批次累计实际收益。
+7. **版本依据**：`POST /api/compact/versions` 由其它业务模块（如表统计信息）把版本依据同步到工作台，
+   同一模块对同一数据集只保留最新一条。
+8. **导出与回看**：`GET /api/compact/export/file` 下载清单文件并留存；`GET /api/compact/exports`
+   回看历史导出，`POST /api/compact/verify` 用下载文件逐批核对任务编号、数据集与收益。
+
+前端对应页面：`/compact`（列表、容量预估、发起确认、复核详情入口）、`/compact/review/:datasetNo`
+（复核详情）、`/compact/workbench`（合并收益核对工作台）。
 | 数据压缩策略 | `compress` | 压缩配置 | 配置编号、目标表名、压缩算法 |
 | 元数据服务 | `metadata` | 元数据表 | 表编号、表名称、字段清单 |
 | 表快照管理 | `snapshot` | 快照记录 | 快照编号、表名称、快照时间 |

@@ -3,6 +3,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Overview from '@/views/Overview.vue'
 const Tablefmt = () => import('@/views/tablefmt/index.vue')
 const Compact = () => import('@/views/compact/index.vue')
+const CompactReview = () => import('@/views/compact/review.vue')
+const CompactWorkbench = () => import('@/views/compact/workbench.vue')
 const Compress = () => import('@/views/compress/index.vue')
 const Metadata = () => import('@/views/metadata/index.vue')
 const Snapshot = () => import('@/views/snapshot/index.vue')
@@ -24,6 +26,8 @@ const router = createRouter({
     { path: '/', name: 'overview', component: Overview },
     { path: '/tablefmt', name: 'tablefmt', component: Tablefmt },
     { path: '/compact', name: 'compact', component: Compact },
+    { path: '/compact/review/:datasetNo', name: 'compact-review', component: CompactReview },
+    { path: '/compact/workbench', name: 'compact-workbench', component: CompactWorkbench },
     { path: '/compress', name: 'compress', component: Compress },
     { path: '/metadata', name: 'metadata', component: Metadata },
     { path: '/snapshot', name: 'snapshot', component: Snapshot },

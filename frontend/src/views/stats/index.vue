@@ -47,6 +47,7 @@
             >
               {{ action }}
             </button>
+            <button class="link" type="button" @click="syncVersions(row)">同步版本依据</button>
           </td>
         </tr>
         <tr v-if="!rows.length">
@@ -107,6 +108,40 @@ async function runAction(action: string, row: Row) {
     await reload()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '表统计信息操作失败'
+  }
+}
+
+/** 消费小文件合并结果数据集后，把版本依据同步到合并收益核对工作台。 */
+async function syncVersions(row: Row) {
+  errorMessage.value = ''
+  try {
+    const table = String(row['表名称'])
+    const response = await request(`/api/compact/datasets?${new URLSearchParams({ table })}`)
+    const payload = await response.json()
+    const datasets: Row[] = payload.items ?? []
+    if (!datasets.length) {
+      throw new Error(`目标表 ${table} 还没有小文件合并结果数据集`)
+    }
+    const version = `${row['报告编号']}@${row['统计时间']}`
+    for (const dataset of datasets) {
+      const result = await request('/api/compact/versions', {
+        method: 'POST',
+        body: JSON.stringify({
+          values: {
+            来源模块: 'stats',
+            数据集编号: dataset['数据集编号'],
+            版本依据: version,
+          },
+        }),
+      })
+      const body = await result.json()
+      if (!result.ok || !body.ok) {
+        throw new Error(body.message ?? '版本依据同步失败')
+      }
+    }
+    errorMessage.value = `已把 ${table} 的统计版本依据同步到合并收益核对工作台`
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '版本依据同步失败'
   }
 }
 

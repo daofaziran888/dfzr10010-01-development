@@ -53,6 +53,40 @@ class CompactEntry(BaseModel):
     field_6: str | None = None  # 执行耗时
     field_7: str | None = None  # 任务状态
 
+
+class CompactEstimate(BaseModel):
+    """执行前容量预估：读取现有分片统计，按目标大小规划合并结果。"""
+
+    目标表名: str
+    目标大小: str | None = None
+    目标大小MB: float = 128.0
+    并行度: int = 4
+    候选分片数: int = 0
+    分区目录: list[str] = Field(default_factory=list)
+    分区分布: dict[str, int] = Field(default_factory=dict)
+    预计文件数下降: int = 0
+    预计容量下降MB: float = 0.0
+    预计输出文件数: int = 0
+    合并前文件数: int = 0
+    合并前容量MB: float = 0.0
+    容量回收比例: float = 0.0
+
+
+class CompactDataset(BaseModel):
+    """小文件合并结果数据集：一次确认只产生一份。"""
+
+    数据集编号: str
+    表名: str
+    任务编号: str | None = None
+    批次编号: str
+    目标大小: str | None = None
+    候选分片数: int = 0
+    预计文件数下降: int = 0
+    预计容量下降MB: float = 0.0
+    实际文件数下降: int | None = None
+    实际容量下降MB: float | None = None
+    状态: str = "待执行"
+
 class CompressEntry(BaseModel):
     """压缩配置明细结构。"""
 

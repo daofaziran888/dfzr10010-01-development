@@ -16,7 +16,9 @@ class Store:
         }
 
     def module_names(self) -> list[str]:
-        return sorted(self._tables)
+        # 以下划线/业务前缀标注的内部明细表（分片统计、批次、数据集等）不参与模块统计，
+        # 它们是小文件合并模块的内部数据，不应出现在运营概览的“业务模块”列表里。
+        return sorted(name for name in self._tables if not name.startswith("compact_"))
 
     def rows(self, module: str) -> list[dict[str, Any]]:
         return self._tables.setdefault(module, [])
